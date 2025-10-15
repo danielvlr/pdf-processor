@@ -16,33 +16,82 @@ function App() {
   const [footerHeightPx, setFooterHeightPx] = useState<number>(40);
   const [headerHeightPx, setHeaderHeightPx] = useState<number>(80);
   const [processing, setProcessing] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string>('');
   const [report, setReport] = useState<ProcessedFile[]>([]);
   const [error, setError] = useState<string>('');
+
+  const CHUNK_SIZE = 30 * 1024 * 1024; // 30MB
+
+  // Upload file in chunks if larger than 30MB
+  const uploadFileInChunks = async (file: File, fieldName: string): Promise<string> => {
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+    if (totalChunks === 1) {
+      // Small file, upload directly
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('fieldName', fieldName);
+      formData.append('originalName', file.name);
+
+      const response = await axios.post('/api/upload-single', formData);
+      return response.data.fileId;
+    }
+
+    // Large file, upload in chunks
+    const fileId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+      const start = chunkIndex * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunk = file.slice(start, end);
+
+      const formData = new FormData();
+      formData.append('chunk', chunk);
+      formData.append('fileId', fileId);
+      formData.append('chunkIndex', chunkIndex.toString());
+      formData.append('totalChunks', totalChunks.toString());
+      formData.append('fieldName', fieldName);
+      formData.append('originalName', file.name);
+
+      setUploadProgress(`Uploading ${fieldName}: ${chunkIndex + 1}/${totalChunks} chunks (${Math.round((chunkIndex + 1) / totalChunks * 100)}%)`);
+
+      await axios.post('/api/upload-chunk', formData);
+    }
+
+    return fileId;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setReport([]);
+    setUploadProgress('');
 
     if (!filesZip || !cover) {
       setError('Por favor, selecione os arquivos ZIP e capa');
       return;
     }
 
-    const formData = new FormData();
-    formData.append('filesZip', filesZip);
-    formData.append('cover', cover);
-    formData.append('footerHeightPx', footerHeightPx.toString());
-    formData.append('headerHeightPx', headerHeightPx.toString());
-
     setProcessing(true);
 
     try {
-      const response = await axios.post('/api/process', formData, {
+      // Upload ZIP file (possibly in chunks)
+      setUploadProgress('Uploading ZIP file...');
+      const zipFileId = await uploadFileInChunks(filesZip, 'filesZip');
+
+      // Upload cover file (possibly in chunks)
+      setUploadProgress('Uploading cover file...');
+      const coverFileId = await uploadFileInChunks(cover, 'cover');
+
+      // Process the uploaded files
+      setUploadProgress('Processing PDFs...');
+      const response = await axios.post('/api/process-uploaded', {
+        zipFileId,
+        coverFileId,
+        footerHeightPx,
+        headerHeightPx,
+      }, {
         responseType: 'blob',
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
       });
 
       // Get report from headers
@@ -151,6 +200,12 @@ function App() {
             {processing ? 'Processando...' : 'Processar PDFs'}
           </button>
         </form>
+
+        {uploadProgress && processing && (
+          <div className="alert alert-info">
+            {uploadProgress}
+          </div>
+        )}
 
         {error && (
           <div className="alert alert-error">

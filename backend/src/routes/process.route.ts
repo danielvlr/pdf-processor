@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { processFiles } from '../controllers/process.controller';
+import { processUploadedFiles } from '../controllers/process-uploaded.controller';
 
 const router = Router();
 
@@ -13,6 +14,7 @@ const upload = multer({
   },
 });
 
+// Original endpoint (for backward compatibility)
 router.post(
   '/process',
   upload.fields([
@@ -21,5 +23,8 @@ router.post(
   ]),
   processFiles
 );
+
+// New endpoint for chunked uploads
+router.post('/process-uploaded', processUploadedFiles);
 
 export { router as processRouter };

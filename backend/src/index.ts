@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { processRouter } from './routes/process.route';
+import { uploadRouter } from './routes/upload.route';
 import { errorHandler } from './middleware/error.middleware';
 
 dotenv.config();
@@ -23,6 +24,7 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
+app.use('/api', uploadRouter);
 app.use('/api', processRouter);
 
 // Servir arquivos estáticos do frontend (React build)

@@ -109,6 +109,12 @@ h1 {
   border: 1px solid #fc8181;
 }
 
+.alert-info {
+  background: #bee3f8;
+  color: #2c5282;
+  border: 1px solid #90cdf4;
+}
+
 .report {
   margin-top: 32px;
   padding-top: 32px;
