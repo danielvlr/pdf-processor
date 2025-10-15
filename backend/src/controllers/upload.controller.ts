@@ -24,7 +24,11 @@ export async function uploadChunk(
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     const chunk = files?.chunk?.[0];
 
+    console.log(`Received upload request - files:`, Object.keys(files || {}));
+    console.log(`Request body:`, req.body);
+
     if (!chunk) {
+      console.error('No chunk file in request');
       res.status(400).json({ error: 'No chunk provided' });
       return;
     }
@@ -32,7 +36,8 @@ export async function uploadChunk(
     const { fileId, chunkIndex, totalChunks, fieldName, originalName } = req.body;
 
     if (!fileId || chunkIndex === undefined || !totalChunks || !fieldName) {
-      res.status(400).json({ error: 'Missing required metadata' });
+      console.error('Missing metadata:', { fileId, chunkIndex, totalChunks, fieldName });
+      res.status(400).json({ error: 'Missing required metadata', received: { fileId, chunkIndex, totalChunks, fieldName } });
       return;
     }
 
