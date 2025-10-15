@@ -20,6 +20,26 @@ function App() {
   const [report, setReport] = useState<ProcessedFile[]>([]);
   const [error, setError] = useState<string>('');
 
+  // Load default cover on component mount
+  React.useEffect(() => {
+    const loadDefaultCover = async () => {
+      try {
+        // Try to fetch Capa.pdf from public folder
+        const response = await fetch('/Capa.pdf');
+        if (response.ok) {
+          const blob = await response.blob();
+          const file = new File([blob], 'Capa.pdf', { type: 'application/pdf' });
+          setCover(file);
+          console.log('Default cover loaded: Capa.pdf');
+        }
+      } catch (error) {
+        console.log('No default cover found, user will need to upload one');
+      }
+    };
+
+    loadDefaultCover();
+  }, []);
+
   // Extract PDFs from ZIP and process in batches
   const processPDFsInBatches = async (): Promise<any[]> => {
     if (!filesZip || !cover) {
@@ -248,16 +268,21 @@ function App() {
 
           <div className="form-group">
             <label htmlFor="cover">
-              Arquivo de Capa * (PDF ou Imagem)
+              Arquivo de Capa (PDF ou Imagem)
               {cover && <span className="file-name">{cover.name}</span>}
+              {cover && cover.name === 'Capa.pdf' && <span className="file-name" style={{ color: '#10b981' }}> (padrão)</span>}
             </label>
             <input
               type="file"
               id="cover"
               accept=".pdf,.png,.jpg,.jpeg,.svg"
               onChange={(e) => setCover(e.target.files?.[0] || null)}
-              required
             />
+            {!cover && (
+              <p style={{ fontSize: '12px', color: '#718096', marginTop: '4px' }}>
+                Capa padrão será carregada automaticamente, ou escolha outra
+              </p>
+            )}
           </div>
 
           <div className="form-group">
