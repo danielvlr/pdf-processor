@@ -113,12 +113,38 @@ export async function processChunk(
     console.log(`Chunk ${chunkIndex} completed: ${pdfFiles.length} PDFs in ${totalElapsed}ms`);
     console.log(`  Success: ${results.filter(r => r.success).length}, Failed: ${results.filter(r => !r.success).length}`);
 
-    // Return processed PDFs as JSON
-    res.json({
-      chunkIndex,
-      totalFiles: results.length,
-      results,
+    // Create output ZIP with processed PDFs
+    const outputZip = new JSZip();
+
+    for (const result of results) {
+      if (result.success && result.data) {
+        // Convert base64 back to buffer
+        const pdfBuffer = Buffer.from(result.data, 'base64');
+        outputZip.file(result.name, pdfBuffer);
+      }
+    }
+
+    // Generate ZIP buffer
+    const outputZipBuffer = await outputZip.generateAsync({
+      type: 'nodebuffer',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 1 },
     });
+
+    // Create summary for header
+    const summary = results.map(r => ({
+      name: r.name,
+      originalPages: r.originalPages,
+      finalPages: r.finalPages,
+      success: r.success,
+      error: r.error,
+    }));
+
+    // Return ZIP with metadata in header
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="batch-${chunkIndex}.zip"`);
+    res.setHeader('X-Process-Report', JSON.stringify(summary));
+    res.send(outputZipBuffer);
 
   } catch (error) {
     console.error('Error in processChunk:', error);

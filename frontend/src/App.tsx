@@ -81,13 +81,36 @@ function App() {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
+          responseType: 'blob', // Receive ZIP as blob
         });
 
-        console.log(`Batch ${batchIndex + 1} processed:`, response.data);
+        console.log(`Batch ${batchIndex + 1} processed, received ZIP`);
 
-        // Collect results from this batch
-        if (response.data.results && Array.isArray(response.data.results)) {
-          allProcessedFiles.push(...response.data.results);
+        // Get metadata from header
+        const reportHeader = response.headers['x-process-report'];
+        if (reportHeader) {
+          const batchResults = JSON.parse(reportHeader);
+          console.log(`Batch ${batchIndex + 1} results:`, batchResults);
+
+          // Extract PDFs from returned ZIP
+          const JSZipLib = (await import('jszip')).default;
+          const batchZipData = await JSZipLib.loadAsync(response.data);
+
+          for (const result of batchResults) {
+            if (result.success) {
+              // Get PDF from ZIP
+              const pdfFile = batchZipData.file(result.name);
+              if (pdfFile) {
+                const pdfBlob = await pdfFile.async('blob');
+                allProcessedFiles.push({
+                  ...result,
+                  blob: pdfBlob, // Store blob instead of base64
+                });
+              }
+            } else {
+              allProcessedFiles.push(result);
+            }
+          }
         }
 
       } catch (error) {
@@ -131,10 +154,9 @@ function App() {
       let failCount = 0;
 
       for (const file of allProcessedFiles) {
-        if (file.success && file.data) {
-          // Convert base64 back to binary
-          const binaryData = Uint8Array.from(atob(file.data), c => c.charCodeAt(0));
-          finalZip.file(file.name, binaryData);
+        if (file.success && file.blob) {
+          // Add blob directly to ZIP
+          finalZip.file(file.name, file.blob);
           successCount++;
         } else {
           failCount++;
