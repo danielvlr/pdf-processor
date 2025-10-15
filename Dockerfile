@@ -3,6 +3,7 @@
 # ============================================
 # Build completo do projeto em uma única imagem
 # Frontend (React) + Backend (Node.js + Express)
+# SEM NGINX - Node.js serve frontend e backend
 # ============================================
 
 # ============================================
@@ -54,19 +55,19 @@ COPY backend/ ./
 RUN npm run build
 
 # ============================================
-# Stage 3: Imagem Final (Multi-Service)
+# Stage 3: Imagem Final (Node.js Only)
 # ============================================
 FROM node:20-alpine
 
 LABEL maintainer="seu-email@example.com"
 LABEL description="PDF Processor - Processamento em lote de PDFs"
-LABEL version="2.1.0"
+LABEL version="2.2.0"
 
-# Instalar nginx, curl e gettext (para envsubst)
-RUN apk add --no-cache nginx curl gettext
+# Instalar apenas curl para health checks
+RUN apk add --no-cache curl
 
 # Criar diretórios
-RUN mkdir -p /app/backend /app/frontend /run/nginx /var/log/nginx
+RUN mkdir -p /app/backend
 
 # ============================================
 # Configurar Backend
@@ -88,40 +89,29 @@ COPY --from=backend-builder /app/backend/package*.json ./
 # ============================================
 # Configurar Frontend
 # ============================================
-# Copiar build do frontend
-COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
-
-# Configurar nginx com arquivo template (processado por envsubst em runtime)
-COPY nginx.conf /etc/nginx/http.d/default.conf.template
+# Copiar build do frontend para ser servido pelo Node.js
+COPY --from=frontend-builder /app/frontend/dist ./public
 
 # ============================================
 # Configurar Variáveis de Ambiente
 # ============================================
 ENV NODE_ENV=production
-ENV BACKEND_PORT=3001
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # ============================================
-# Expor Portas
+# Expor Porta
 # ============================================
-# Porta dinâmica (Cloud Run usa $PORT, padrão 80)
-# Backend sempre em 3001
-EXPOSE 80 3001
+# Porta dinâmica (Cloud Run usa $PORT, padrão 3001)
+EXPOSE 3001
 
 # ============================================
 # Health Check
 # ============================================
-# Health check usa a porta padrão 80 (Cloud Run injeta PORT no runtime)
+# Health check na porta que o Node.js está escutando
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost/health || exit 1
-
-# ============================================
-# Startup Script
-# ============================================
-# Copiar script de inicialização
-COPY start.sh /app/start.sh
-RUN chmod +x /app/start.sh
+    CMD curl -f http://localhost:${PORT:-3001}/health || exit 1
 
 # ============================================
 # Start Application
 # ============================================
-CMD ["/app/start.sh"]
+CMD ["node", "dist/index.js"]
