@@ -62,8 +62,8 @@ LABEL maintainer="seu-email@example.com"
 LABEL description="PDF Processor - Processamento em lote de PDFs"
 LABEL version="2.1.0"
 
-# Instalar nginx para servir frontend
-RUN apk add --no-cache nginx
+# Instalar nginx e curl para servir frontend e health checks
+RUN apk add --no-cache nginx curl
 
 # Criar diretórios
 RUN mkdir -p /app/backend /app/frontend /run/nginx /var/log/nginx
@@ -91,38 +91,8 @@ COPY --from=backend-builder /app/backend/package*.json ./
 # Copiar build do frontend
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
 
-# Configurar nginx
-COPY <<EOF /etc/nginx/http.d/default.conf
-server {
-    listen 80;
-    server_name _;
-
-    # Frontend
-    location / {
-        root /usr/share/nginx/html;
-        try_files \$uri \$uri/ /index.html;
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-    }
-
-    # Backend API
-    location /api/ {
-        proxy_pass http://localhost:3001/api/;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-        client_max_body_size 100M;
-    }
-
-    # Health check
-    location /health {
-        proxy_pass http://localhost:3001/health;
-        proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-    }
-}
-EOF
+# Configurar nginx com arquivo externo
+COPY nginx.conf /etc/nginx/http.d/default.conf
 
 # ============================================
 # Configurar Variáveis de Ambiente
@@ -145,38 +115,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # ============================================
 # Startup Script
 # ============================================
-COPY <<'EOF' /app/start.sh
-#!/bin/sh
-set -e
-
-echo "🚀 Starting PDF Processor..."
-
-# Start nginx
-echo "📡 Starting nginx..."
-nginx
-
-# Start backend
-echo "⚙️  Starting backend..."
-cd /app/backend
-node dist/index.js &
-
-# Wait for services
-echo "⏳ Waiting for services to be ready..."
-sleep 5
-
-# Check if services are running
-if curl -f http://localhost/health > /dev/null 2>&1; then
-    echo "✅ Services are ready!"
-else
-    echo "❌ Services failed to start"
-    exit 1
-fi
-
-# Keep container running and show logs
-echo "📊 Application running. Logs:"
-tail -f /var/log/nginx/access.log
-EOF
-
+# Copiar script de inicialização
+COPY start.sh /app/start.sh
 RUN chmod +x /app/start.sh
 
 # ============================================
