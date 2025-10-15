@@ -23,10 +23,9 @@ function App() {
   const CHUNK_SIZE = 25 * 1024 * 1024; // 25MB per chunk
 
   // Split ZIP file into chunks and process each one
-  const processZipInChunks = async (): Promise<void> => {
+  const processZipInChunks = async (): Promise<any[]> => {
     if (!filesZip || !cover) {
-      setError('Por favor, selecione os arquivos ZIP e capa');
-      return;
+      throw new Error('Por favor, selecione os arquivos ZIP e capa');
     }
 
     const totalChunks = Math.ceil(filesZip.size / CHUNK_SIZE);
@@ -77,50 +76,6 @@ function App() {
     }
 
     return allProcessedFiles;
-  };
-
-  // Old function - keeping for reference but not used anymore
-  const uploadFileInChunks_OLD = async (file: File, fieldName: string): Promise<string> => {
-    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-
-    if (totalChunks === 1) {
-      // Small file, upload directly
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('fieldName', fieldName);
-      formData.append('originalName', file.name);
-
-      const response = await axios.post('/api/upload-single', formData);
-      return response.data.fileId;
-    }
-
-    // Large file, upload in chunks
-    const fileId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
-
-    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-      const start = chunkIndex * CHUNK_SIZE;
-      const end = Math.min(start + CHUNK_SIZE, file.size);
-      const chunk = file.slice(start, end);
-
-      const formData = new FormData();
-      formData.append('chunk', chunk);
-      formData.append('fileId', fileId);
-      formData.append('chunkIndex', chunkIndex.toString());
-      formData.append('totalChunks', totalChunks.toString());
-      formData.append('fieldName', fieldName);
-      formData.append('originalName', file.name);
-
-      setUploadProgress(`Uploading ${fieldName}: ${chunkIndex + 1}/${totalChunks} chunks (${Math.round((chunkIndex + 1) / totalChunks * 100)}%)`);
-
-      try {
-        await axios.post('/api/upload-chunk', formData);
-      } catch (error) {
-        console.error(`Error uploading chunk ${chunkIndex + 1}/${totalChunks}:`, error);
-        throw new Error(`Failed to upload chunk ${chunkIndex + 1}/${totalChunks}`);
-      }
-    }
-
-    return fileId;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
