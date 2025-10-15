@@ -1,0 +1,216 @@
+PDF-PROCESSOR - ESTRUTURA COMPLETA DO PROJETO
+=============================================
+
+pdf-processor/
+│
+├── 📄 package.json              # Root workspace config
+├── 📄 docker-compose.yml        # Docker orchestration
+├── 📄 .gitignore               # Git ignore rules
+├── 📄 README.md                # Main documentation
+├── 📄 QUICK_START.md           # Quick start guide
+├── 📄 ARCHITECTURE.md          # Architecture documentation
+├── 📄 PROJECT_STRUCTURE.txt    # This file
+├── 🔧 setup.sh                 # Setup script (Linux/Mac)
+├── 🔧 setup.bat                # Setup script (Windows)
+│
+├── 📁 backend/                 # Backend API (Node.js + TypeScript)
+│   ├── 📄 package.json         # Backend dependencies
+│   ├── 📄 tsconfig.json        # TypeScript config
+│   ├── 📄 jest.config.js       # Jest test config
+│   ├── 📄 Dockerfile           # Docker image config
+│   ├── 📄 .dockerignore        # Docker ignore rules
+│   ├── 📄 .env.example         # Environment variables template
+│   ├── 📄 .env                 # Environment variables (local)
+│   │
+│   └── 📁 src/                 # Source code
+│       ├── 📄 index.ts         # Application entry point
+│       │
+│       ├── 📁 routes/          # API routes
+│       │   └── 📄 process.route.ts
+│       │
+│       ├── 📁 controllers/     # Request handlers
+│       │   ├── 📄 process.controller.ts
+│       │   │
+│       │   └── 📁 __tests__/
+│       │       └── 📄 process.controller.test.ts
+│       │
+│       ├── 📁 services/        # Business logic
+│       │   ├── 📄 pdf.service.ts
+│       │   ├── 📄 image.service.ts
+│       │   │
+│       │   └── 📁 __tests__/
+│       │       ├── 📄 pdf.service.test.ts
+│       │       └── 📄 image.service.test.ts
+│       │
+│       └── 📁 middleware/      # Express middleware
+│           └── 📄 error.middleware.ts
+│
+├── 📁 frontend/                # Frontend SPA (React + TypeScript)
+│   ├── 📄 package.json         # Frontend dependencies
+│   ├── 📄 tsconfig.json        # TypeScript config
+│   ├── 📄 tsconfig.node.json   # TypeScript config for Node
+│   ├── 📄 vite.config.ts       # Vite build config
+│   ├── 📄 index.html           # HTML template
+│   ├── 📄 Dockerfile           # Docker image config
+│   ├── 📄 .dockerignore        # Docker ignore rules
+│   ├── 📄 nginx.conf           # Nginx config for production
+│   │
+│   ├── 📁 public/              # Static assets
+│   │   └── 📄 vite.svg
+│   │
+│   └── 📁 src/                 # Source code
+│       ├── 📄 main.tsx         # Application entry point
+│       ├── 📄 App.tsx          # Main component
+│       ├── 📄 App.css          # Component styles
+│       └── 📄 index.css        # Global styles
+│
+└── 📁 node_modules/            # Dependencies (ignored by git)
+
+
+ARQUIVOS PRINCIPAIS POR FUNÇÃO
+================================
+
+🚀 INICIALIZAÇÃO
+  - backend/src/index.ts          → Express server setup
+  - frontend/src/main.tsx          → React app initialization
+
+🎨 INTERFACE DE USUÁRIO
+  - frontend/src/App.tsx           → Upload form + report display
+  - frontend/src/App.css           → Styling
+  - frontend/index.html            → HTML template
+
+🔧 PROCESSAMENTO CORE
+  - backend/src/services/pdf.service.ts        → PDF manipulation
+  - backend/src/services/image.service.ts      → Image conversion
+  - backend/src/controllers/process.controller.ts → Orchestration
+
+🛣️ ROTAS E API
+  - backend/src/routes/process.route.ts        → POST /api/process
+
+🧪 TESTES
+  - backend/src/services/__tests__/pdf.service.test.ts
+  - backend/src/services/__tests__/image.service.test.ts
+  - backend/src/controllers/__tests__/process.controller.test.ts
+
+🐳 DOCKER
+  - docker-compose.yml             → Multi-container setup
+  - backend/Dockerfile             → Backend image
+  - frontend/Dockerfile            → Frontend image
+  - frontend/nginx.conf            → Nginx config
+
+📚 DOCUMENTAÇÃO
+  - README.md                      → Complete documentation
+  - QUICK_START.md                 → Getting started guide
+  - ARCHITECTURE.md                → Technical architecture
+  - PROJECT_STRUCTURE.txt          → This file
+
+⚙️ CONFIGURAÇÃO
+  - backend/tsconfig.json          → Backend TypeScript
+  - frontend/tsconfig.json         → Frontend TypeScript
+  - frontend/vite.config.ts        → Build configuration
+  - backend/jest.config.js         → Test configuration
+  - backend/.env                   → Environment variables
+
+
+PRINCIPAIS TECNOLOGIAS
+======================
+
+Backend:
+  ✓ Node.js 20
+  ✓ TypeScript
+  ✓ Express.js
+  ✓ pdf-lib (PDF manipulation)
+  ✓ sharp (image processing)
+  ✓ jszip (ZIP handling)
+  ✓ multer (file uploads)
+  ✓ Jest + Supertest (testing)
+
+Frontend:
+  ✓ React 18
+  ✓ TypeScript
+  ✓ Vite (build tool)
+  ✓ Axios (HTTP client)
+  ✓ CSS3
+
+DevOps:
+  ✓ Docker
+  ✓ Docker Compose
+  ✓ Nginx
+
+
+COMANDOS RÁPIDOS
+================
+
+Setup:
+  npm run install:all              # Instalar todas as dependências
+  ./setup.sh                       # Linux/Mac
+  setup.bat                        # Windows
+
+Desenvolvimento:
+  npm run dev                      # Backend + Frontend
+  npm run dev:backend              # Apenas backend
+  npm run dev:frontend             # Apenas frontend
+
+Testes:
+  npm test                         # Rodar testes
+
+Build:
+  npm run build                    # Build de produção
+
+Docker:
+  docker-compose up --build        # Build e iniciar
+  docker-compose down              # Parar containers
+  docker-compose logs -f           # Ver logs
+
+
+ENDPOINTS DA API
+================
+
+GET  /health                       # Health check
+POST /api/process                  # Process PDFs
+
+Request (multipart/form-data):
+  - filesZip: File (ZIP)
+  - cover: File (PDF/PNG/JPG/SVG)
+  - footerHeightPx: Number (optional, default: 10)
+
+Response:
+  - Body: ZIP file (processed PDFs)
+  - Header: X-Process-Report (JSON array)
+
+
+FLUXO DE PROCESSAMENTO
+======================
+
+1. User uploads ZIP + cover
+2. Frontend sends to POST /api/process
+3. Backend extracts PDFs from ZIP
+4. Backend converts cover (if image)
+5. For each PDF:
+   a. Replace page 1 with cover
+   b. Remove footer from middle pages
+   c. Skip last page
+6. Backend creates output ZIP
+7. Backend sends ZIP + report
+8. Frontend triggers download
+9. Frontend displays report
+
+
+PORTAS UTILIZADAS
+=================
+
+Development:
+  Frontend:  http://localhost:3000
+  Backend:   http://localhost:3001
+
+Production (Docker):
+  Frontend:  http://localhost:80
+  Backend:   http://localhost:3001 (internal)
+
+
+AUTOR E LICENÇA
+===============
+
+Licença: MIT
+Criado por: Claude (Anthropic)
+Data: 2025
