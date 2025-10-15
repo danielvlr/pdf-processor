@@ -112,7 +112,7 @@ EXPOSE 80 3001
 # ============================================
 # Health check usa a porta padrão 80 (Cloud Run injeta PORT no runtime)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/health || exit 1
+    CMD curl -f http://localhost/health || exit 1
 
 # ============================================
 # Startup Script
