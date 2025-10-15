@@ -40,15 +40,24 @@ export async function uploadChunk(
     const chunkPath = path.join(CHUNKS_DIR, `${fileId}-chunk-${chunkIndex}`);
     await fs.writeFile(chunkPath, chunk.buffer);
 
-    console.log(`Chunk received: ${fileId} - ${parseInt(chunkIndex) + 1}/${totalChunks}`);
+    console.log(`✓ Chunk saved: ${fileId}-chunk-${chunkIndex} (${chunk.size} bytes) - ${parseInt(chunkIndex) + 1}/${totalChunks}`);
 
-    // Check if all chunks are uploaded
-    const allChunksUploaded = await checkAllChunksUploaded(fileId, parseInt(totalChunks));
+    // Check if this is the last chunk
+    const isLastChunk = parseInt(chunkIndex) === parseInt(totalChunks) - 1;
+    let allChunksUploaded = false;
 
-    if (allChunksUploaded) {
-      // Merge chunks
-      console.log(`All chunks received for ${fileId}, merging...`);
-      await mergeChunks(fileId, parseInt(totalChunks), fieldName, originalName);
+    if (isLastChunk) {
+      // Last chunk received, check if all are present
+      console.log(`Last chunk received for ${fileId}, checking all chunks...`);
+      allChunksUploaded = await checkAllChunksUploaded(fileId, parseInt(totalChunks));
+
+      if (allChunksUploaded) {
+        // Merge chunks
+        console.log(`All chunks present for ${fileId}, starting merge...`);
+        await mergeChunks(fileId, parseInt(totalChunks), fieldName, originalName);
+      } else {
+        console.error(`Missing chunks for ${fileId}, expected ${totalChunks}`);
+      }
     }
 
     res.json({
@@ -60,6 +69,7 @@ export async function uploadChunk(
     });
 
   } catch (error) {
+    console.error('Error in uploadChunk:', error);
     next(error);
   }
 }
@@ -130,19 +140,23 @@ async function mergeChunks(
   originalName: string
 ): Promise<void> {
   const outputPath = path.join(UPLOAD_DIR, `${fileId}-${fieldName}`);
-  const writeStream = await fs.open(outputPath, 'w');
+
+  // Collect all chunks in memory first
+  const chunks: Buffer[] = [];
 
   try {
     for (let i = 0; i < totalChunks; i++) {
       const chunkPath = path.join(CHUNKS_DIR, `${fileId}-chunk-${i}`);
       const chunkData = await fs.readFile(chunkPath);
-      await writeStream.write(chunkData);
+      chunks.push(chunkData);
 
-      // Delete chunk after merging
+      // Delete chunk after reading
       await fs.unlink(chunkPath).catch(() => {});
     }
 
-    await writeStream.close();
+    // Merge all chunks into one buffer and write
+    const mergedBuffer = Buffer.concat(chunks);
+    await fs.writeFile(outputPath, mergedBuffer);
 
     // Save metadata
     const stats = await fs.stat(outputPath);
@@ -157,7 +171,7 @@ async function mergeChunks(
     console.log(`File merged successfully: ${fileId} (${stats.size} bytes)`);
 
   } catch (error) {
-    await writeStream.close();
+    console.error(`Error merging chunks for ${fileId}:`, error);
     throw error;
   }
 }
