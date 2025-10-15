@@ -20,10 +20,67 @@ function App() {
   const [report, setReport] = useState<ProcessedFile[]>([]);
   const [error, setError] = useState<string>('');
 
-  const CHUNK_SIZE = 25 * 1024 * 1024; // 25MB (safe margin for multipart overhead)
+  const CHUNK_SIZE = 25 * 1024 * 1024; // 25MB per chunk
 
-  // Upload file in chunks if larger than 25MB
-  const uploadFileInChunks = async (file: File, fieldName: string): Promise<string> => {
+  // Split ZIP file into chunks and process each one
+  const processZipInChunks = async (): Promise<void> => {
+    if (!filesZip || !cover) {
+      setError('Por favor, selecione os arquivos ZIP e capa');
+      return;
+    }
+
+    const totalChunks = Math.ceil(filesZip.size / CHUNK_SIZE);
+    const allProcessedFiles: any[] = [];
+
+    console.log(`Splitting ZIP into ${totalChunks} chunks of ${CHUNK_SIZE / 1024 / 1024}MB each`);
+
+    // Process each chunk
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+      const start = chunkIndex * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, filesZip.size);
+      const zipChunk = filesZip.slice(start, end);
+
+      setUploadProgress(`Processing chunk ${chunkIndex + 1}/${totalChunks} (${Math.round((chunkIndex + 1) / totalChunks * 100)}%)...`);
+
+      console.log(`Processing chunk ${chunkIndex + 1}/${totalChunks}: ${start}-${end} (${zipChunk.size} bytes)`);
+
+      const formData = new FormData();
+      formData.append('zipChunk', zipChunk);
+      formData.append('cover', cover);
+      formData.append('footerHeightPx', footerHeightPx.toString());
+      formData.append('headerHeightPx', headerHeightPx.toString());
+      formData.append('chunkIndex', chunkIndex.toString());
+
+      try {
+        const response = await axios.post('/api/process-chunk', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        console.log(`Chunk ${chunkIndex + 1} processed:`, response.data);
+
+        // Collect results from this chunk
+        if (response.data.results && Array.isArray(response.data.results)) {
+          allProcessedFiles.push(...response.data.results);
+        }
+
+      } catch (error) {
+        console.error(`Error processing chunk ${chunkIndex + 1}:`, error);
+        throw new Error(`Failed to process chunk ${chunkIndex + 1}/${totalChunks}`);
+      }
+
+      // Force garbage collection hint
+      if ((window as any).gc) {
+        (window as any).gc();
+      }
+    }
+
+    return allProcessedFiles;
+  };
+
+  // Old function - keeping for reference but not used anymore
+  const uploadFileInChunks_OLD = async (file: File, fieldName: string): Promise<string> => {
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
     if (totalChunks === 1) {
@@ -80,34 +137,40 @@ function App() {
     setProcessing(true);
 
     try {
-      // Upload ZIP file (possibly in chunks)
-      setUploadProgress('Uploading ZIP file...');
-      const zipFileId = await uploadFileInChunks(filesZip, 'filesZip');
+      // Process ZIP in chunks and get all results
+      const allProcessedFiles = await processZipInChunks();
 
-      // Upload cover file (possibly in chunks)
-      setUploadProgress('Uploading cover file...');
-      const coverFileId = await uploadFileInChunks(cover, 'cover');
+      setUploadProgress('Creating final ZIP...');
 
-      // Process the uploaded files
-      setUploadProgress('Processing PDFs...');
-      const response = await axios.post('/api/process-uploaded', {
-        zipFileId,
-        coverFileId,
-        footerHeightPx,
-        headerHeightPx,
-      }, {
-        responseType: 'blob',
-      });
+      // Create final ZIP with all processed PDFs
+      const JSZip = (await import('jszip')).default;
+      const finalZip = new JSZip();
 
-      // Get report from headers
-      const reportHeader = response.headers['x-process-report'];
-      if (reportHeader) {
-        const parsedReport = JSON.parse(reportHeader);
-        setReport(parsedReport);
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const file of allProcessedFiles) {
+        if (file.success && file.data) {
+          // Convert base64 back to binary
+          const binaryData = Uint8Array.from(atob(file.data), c => c.charCodeAt(0));
+          finalZip.file(file.name, binaryData);
+          successCount++;
+        } else {
+          failCount++;
+        }
       }
 
-      // Download the processed ZIP
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      console.log(`Creating ZIP with ${successCount} files (${failCount} failed)`);
+
+      // Generate ZIP blob
+      const zipBlob = await finalZip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 1 }
+      });
+
+      // Download the final ZIP
+      const url = window.URL.createObjectURL(zipBlob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', 'processed-pdfs.zip');
@@ -115,6 +178,15 @@ function App() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
+
+      // Set report for UI
+      setReport(allProcessedFiles.map((f: any) => ({
+        name: f.name,
+        originalPages: f.originalPages,
+        finalPages: f.finalPages,
+        success: f.success,
+        error: f.error
+      })));
 
     } catch (err: any) {
       console.error('Error during processing:', err);

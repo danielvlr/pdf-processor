@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { processFiles } from '../controllers/process.controller';
 import { processUploadedFiles } from '../controllers/process-uploaded.controller';
+import { processChunk } from '../controllers/process-chunk.controller';
 
 const router = Router();
 
@@ -26,5 +27,15 @@ router.post(
 
 // New endpoint for chunked uploads
 router.post('/process-uploaded', processUploadedFiles);
+
+// Process chunk and return results immediately (no merge on server)
+router.post(
+  '/process-chunk',
+  upload.fields([
+    { name: 'zipChunk', maxCount: 1 },
+    { name: 'cover', maxCount: 1 },
+  ]),
+  processChunk
+);
 
 export { router as processRouter };
