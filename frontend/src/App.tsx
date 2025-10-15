@@ -20,8 +20,6 @@ function App() {
   const [report, setReport] = useState<ProcessedFile[]>([]);
   const [error, setError] = useState<string>('');
 
-  const CHUNK_SIZE = 25 * 1024 * 1024; // 25MB per chunk
-
   // Extract PDFs from ZIP and process in batches
   const processPDFsInBatches = async (): Promise<any[]> => {
     if (!filesZip || !cover) {
