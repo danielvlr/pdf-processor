@@ -99,7 +99,6 @@ COPY nginx.conf /etc/nginx/http.d/default.conf.template
 # ============================================
 ENV NODE_ENV=production
 ENV BACKEND_PORT=3001
-ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # ============================================
 # Expor Portas
@@ -113,7 +112,7 @@ EXPOSE 80 3001
 # ============================================
 # Health check usa a porta padrão 80 (Cloud Run injeta PORT no runtime)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-80}/health || exit 1
+    CMD curl -f http://localhost:${PORT}/health || exit 1
 
 # ============================================
 # Startup Script
