@@ -48,7 +48,7 @@ gcloud run deploy pdf-processor \
   --timeout 900 \
   --concurrency 1 \
   --max-instances 10 \
-  --set-env-vars "NODE_ENV=production,NODE_OPTIONS=--max-old-space-size=4096,PDF_CONCURRENCY=2" \
+  --set-env-vars "NODE_ENV=production,NODE_OPTIONS=--max-old-space-size=4096" \
   --execution-environment gen2
 ```
 
@@ -58,17 +58,8 @@ gcloud run deploy pdf-processor \
 |----------|-------|-----------|
 | `NODE_ENV` | `production` | Modo de produção |
 | `NODE_OPTIONS` | `--max-old-space-size=4096` | 4GB heap do Node.js |
-| `PDF_CONCURRENCY` | `2` | 2 PDFs processados por vez |
 
-### Ajustar Concorrência
-
-Para máquinas mais fracas ou arquivos muito grandes:
-
-```bash
-# Processar 1 PDF por vez (mais lento, menos memória)
-gcloud run services update pdf-processor \
-  --update-env-vars PDF_CONCURRENCY=1
-```
+**Nota:** O processamento é **100% sequencial** (1 PDF por vez) para máxima estabilidade e menor uso de memória.
 
 ## 📊 Custos Estimados
 

@@ -30,7 +30,7 @@ gcloud run deploy $SERVICE_NAME \
   --concurrency 1 \
   --max-instances 10 \
   --min-instances 0 \
-  --set-env-vars "NODE_ENV=production,NODE_OPTIONS=--max-old-space-size=4096,PDF_CONCURRENCY=2" \
+  --set-env-vars "NODE_ENV=production,NODE_OPTIONS=--max-old-space-size=4096" \
   --execution-environment gen2
 
 echo ""

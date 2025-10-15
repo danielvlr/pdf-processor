@@ -59,11 +59,20 @@ export async function processFiles(
       return;
     }
 
-    // Process each PDF in parallel for better performance
+    // Process each PDF SEQUENTIALLY (one at a time) to avoid memory issues
     const results: ProcessedFile[] = [];
     const outputZip = new JSZip();
 
-    const processingPromises = pdfFiles.map(async (pdfFile) => {
+    console.log(`Starting sequential processing of ${pdfFiles.length} PDFs...`);
+    const startTime = Date.now();
+
+    // Process one PDF at a time (NO PARALLELISM)
+    for (let i = 0; i < pdfFiles.length; i++) {
+      const pdfFile = pdfFiles[i];
+      const fileStartTime = Date.now();
+
+      console.log(`[${i + 1}/${pdfFiles.length}] Processing: ${pdfFile.name}`);
+
       try {
         const { processedPdf, originalPages, finalPages } = await processPDF(
           pdfFile.data,
@@ -72,47 +81,43 @@ export async function processFiles(
           headerHeightPx
         );
 
-        return {
+        const elapsed = Date.now() - fileStartTime;
+        console.log(`  ✓ ${pdfFile.name} (${originalPages}→${finalPages} pages, ${elapsed}ms)`);
+
+        // Add to output ZIP
+        outputZip.file(pdfFile.name, processedPdf);
+
+        // Add to results
+        results.push({
           name: pdfFile.name,
-          processedPdf,
           originalPages,
           finalPages,
-          success: true as const,
-        };
-      } catch (error) {
-        return {
-          name: pdfFile.name,
-          processedPdf: null,
-          originalPages: 0,
-          finalPages: 0,
-          success: false as const,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        };
-      }
-    });
-
-    const processedResults = await Promise.all(processingPromises);
-
-    // Add all processed files to output ZIP and build results
-    for (const result of processedResults) {
-      if (result.success && result.processedPdf) {
-        outputZip.file(result.name, result.processedPdf);
-        results.push({
-          name: result.name,
-          originalPages: result.originalPages,
-          finalPages: result.finalPages,
           success: true,
         });
-      } else {
+
+      } catch (error) {
+        const elapsed = Date.now() - fileStartTime;
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        console.log(`  ✗ ${pdfFile.name} - Error: ${errorMsg} (${elapsed}ms)`);
+
         results.push({
-          name: result.name,
-          originalPages: result.originalPages,
-          finalPages: result.finalPages,
+          name: pdfFile.name,
+          originalPages: 0,
+          finalPages: 0,
           success: false,
-          error: result.error,
+          error: errorMsg,
         });
       }
+
+      // Force garbage collection after each PDF (if available)
+      if (global.gc) {
+        global.gc();
+      }
     }
+
+    const totalElapsed = Date.now() - startTime;
+    console.log(`Completed processing ${pdfFiles.length} PDFs in ${totalElapsed}ms (avg: ${Math.round(totalElapsed / pdfFiles.length)}ms per file)`);
+    console.log(`Success: ${results.filter(r => r.success).length}, Failed: ${results.filter(r => !r.success).length}`);
 
     // Generate output ZIP with fast compression for better performance
     const outputZipBuffer = await outputZip.generateAsync({
