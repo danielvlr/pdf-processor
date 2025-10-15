@@ -20,9 +20,9 @@ function App() {
   const [report, setReport] = useState<ProcessedFile[]>([]);
   const [error, setError] = useState<string>('');
 
-  const CHUNK_SIZE = 30 * 1024 * 1024; // 30MB
+  const CHUNK_SIZE = 25 * 1024 * 1024; // 25MB (safe margin for multipart overhead)
 
-  // Upload file in chunks if larger than 30MB
+  // Upload file in chunks if larger than 25MB
   const uploadFileInChunks = async (file: File, fieldName: string): Promise<string> => {
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 

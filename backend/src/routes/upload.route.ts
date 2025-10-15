@@ -4,11 +4,12 @@ import { uploadChunk, uploadSingle } from '../controllers/upload.controller';
 
 const router = Router();
 
-// Configure multer for chunk uploads (30MB max per chunk)
+// Configure multer for chunk uploads (35MB to allow overhead + 30MB chunk)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 30 * 1024 * 1024, // 30MB per chunk
+    fileSize: 35 * 1024 * 1024, // 35MB (30MB chunk + 5MB multipart overhead)
+    fieldSize: 35 * 1024 * 1024, // 35MB for field size
   },
 });
 
