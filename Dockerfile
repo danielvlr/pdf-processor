@@ -16,7 +16,7 @@ WORKDIR /app/frontend
 COPY frontend/package*.json ./
 
 # Instalar dependências
-RUN npm ci --only=production
+RUN npm run install
 
 # Copiar código fonte
 COPY frontend/ ./
@@ -45,7 +45,7 @@ RUN apk add --no-cache \
 COPY backend/package*.json ./
 
 # Instalar dependências
-RUN npm run install:all
+RUN npm run install
 
 # Copiar código fonte
 COPY backend/ ./
