@@ -1,0 +1,44 @@
+# Google Cloud Run Configuration
+# Deploy com: gcloud run services replace cloudrun.yaml
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: pdf-processor
+  labels:
+    cloud.googleapis.com/location: southamerica-east1
+spec:
+  template:
+    metadata:
+      annotations:
+        # Aumentar limite de request body para 500MB
+        run.googleapis.com/client-name: 'cloud-console'
+        # Timeout de 15 minutos (máximo permitido)
+        run.googleapis.com/execution-environment: gen2
+    spec:
+      # Timeout de requisição: 15 minutos (900s)
+      timeoutSeconds: 900
+      # CPU e memória para processar PDFs grandes
+      containerConcurrency: 1
+      containers:
+      - image: REGION-docker.pkg.dev/PROJECT_ID/REPO/pdf-processor:latest
+        resources:
+          limits:
+            # 4GB de memória para processar arquivos grandes
+            memory: 4Gi
+            # 2 vCPUs para melhor performance
+            cpu: '2'
+        env:
+        - name: NODE_ENV
+          value: production
+        - name: NODE_OPTIONS
+          value: '--max-old-space-size=4096'
+        - name: PDF_CONCURRENCY
+          value: '2'
+        ports:
+        - name: http1
+          containerPort: 3001
+      # Scaling
+      scaling:
+        minInstances: 0
+        maxInstances: 10
