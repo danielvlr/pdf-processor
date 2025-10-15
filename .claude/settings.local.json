@@ -6,7 +6,8 @@
       "Bash(gh:*)",
       "Bash(git commit -m \"$(cat <<''EOF''\nci: add GitHub Actions workflows and documentation\n\n🤖 CI/CD Automação:\n- Workflow de CI/CD completo para builds e testes\n- Workflow de Release automático com changelog\n- Workflow de teste Docker semanal\n- Build paralelo de backend + frontend\n- Testes automatizados em cada push/PR\n- Docker build e cache otimizado\n\n📊 Features dos Workflows:\n- Build do TypeScript (backend)\n- Build do React (frontend)\n- Testes unitários com Jest\n- Build e validação Docker\n- Cobertura de código\n- Quality checks\n- Release automático com tags\n\n📚 Documentação Adicionada:\n- Guia completo de GitHub Actions\n- Passo a passo de setup\n- Instruções de publicação no GitHub\n- README com badges exemplo\n- Troubleshooting e exemplos\n\n⚡ Benefícios:\n- Feedback instantâneo em PRs\n- Releases automatizados\n- Docker testado continuamente\n- 100% gratuito no GitHub\n- CI/CD profissional\n\n🎯 Uso:\n- Push → CI automático\n- Tag v*.*.* → Release automático\n- Manual trigger disponível\n\n🤖 Generated with Claude Code (https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(git commit:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
