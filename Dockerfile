@@ -96,8 +96,6 @@ COPY --from=frontend-builder /app/frontend/dist ./public
 # Configurar Variáveis de Ambiente
 # ============================================
 ENV NODE_ENV=production
-ENV NODE_OPTIONS="--max-old-space-size=4096"
-
 
 # ============================================
 # Expor Porta
