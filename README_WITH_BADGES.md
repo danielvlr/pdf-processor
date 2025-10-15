@@ -1,12 +1,15 @@
 # PDF Processor 🚀
 
 <!-- Badges - Substitua SEU_USUARIO pelo seu username do GitHub -->
-![CI](https://github.com/SEU_USUARIO/pdf-processor/actions/workflows/ci.yml/badge.svg)
-![Docker](https://github.com/SEU_USUARIO/pdf-processor/actions/workflows/docker-build-test.yml/badge.svg)
+![CI/CD](https://github.com/SEU_USUARIO/pdf-processor/actions/workflows/ci.yml/badge.svg)
+![Docker Build](https://github.com/SEU_USUARIO/pdf-processor/actions/workflows/docker-build-test.yml/badge.svg)
+![Docker Publish](https://github.com/SEU_USUARIO/pdf-processor/actions/workflows/docker-publish.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)
 ![TypeScript](https://img.shields.io/badge/typescript-5.3-blue)
 ![Docker](https://img.shields.io/badge/docker-ready-blue)
+![Docker Image Size](https://img.shields.io/docker/image-size/SEU_USUARIO/pdf-processor/latest?label=docker%20size)
+![Docker Pulls](https://img.shields.io/docker/pulls/SEU_USUARIO/pdf-processor)
 
 > 🚀 Processador de PDFs em lote com remoção de cabeçalhos/rodapés e performance otimizada (85-90% mais rápido)
 
