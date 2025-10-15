@@ -36,12 +36,21 @@ pdf-processor/
 
 ### Principais comandos:
 ```dockerfile
-# Copia configuração do Nginx
-COPY nginx.conf /etc/nginx/http.d/default.conf
+# Instala gettext para suporte a envsubst (substituição de variáveis)
+RUN apk add --no-cache nginx curl gettext
+
+# Copia configuração do Nginx como template (processado em runtime)
+COPY nginx.conf /etc/nginx/http.d/default.conf.template
 
 # Copia script de inicialização
 COPY start.sh /app/start.sh
 ```
+
+### Suporte a Cloud Run:
+- Porta dinâmica via `$PORT` environment variable
+- Template nginx.conf processado com envsubst
+- Health check usa `${PORT:-80}`
+- Compatível com qualquer plataforma cloud
 
 ---
 
@@ -53,7 +62,8 @@ COPY start.sh /app/start.sh
 Configura o Nginx como:
 - Servidor web para o frontend
 - Proxy reverso para o backend
-- Gateway único na porta 80
+- Gateway único com porta dinâmica (`${PORT:-80}`)
+- Template processado por envsubst no start.sh
 
 ### Rotas configuradas:
 
@@ -150,6 +160,19 @@ Script de inicialização que:
 ```
 
 ### Features:
+
+#### 0. Suporte a Porta Dinâmica (Cloud Run)
+```bash
+# Cloud Run e outros ambientes podem definir PORT
+PORT=${PORT:-80}
+
+# Processar template do nginx.conf com envsubst
+export PORT
+envsubst '${PORT}' < /etc/nginx/http.d/default.conf.template > /etc/nginx/http.d/default.conf
+```
+- Aceita `$PORT` do ambiente (Cloud Run, Heroku, etc.)
+- Fallback para porta 80 se não definida
+- Gera nginx.conf final em runtime
 
 #### 1. Health Checks Automáticos
 ```bash

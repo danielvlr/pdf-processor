@@ -1,9 +1,13 @@
 #!/bin/sh
 set -e
 
+# Cloud Run e outros ambientes podem definir PORT
+PORT=${PORT:-80}
+
 echo "================================"
 echo "🚀 Starting PDF Processor v2.1.0"
 echo "================================"
+echo "Port: $PORT"
 echo ""
 
 # Função para verificar se um serviço está respondendo
@@ -31,14 +35,21 @@ wait_for_service() {
 }
 
 # ============================================
-# 1. Iniciar Nginx
+# 1. Configurar e Iniciar Nginx
 # ============================================
-echo "📡 Starting Nginx..."
+echo "📝 Configuring Nginx for port $PORT..."
+
+# Processar template do nginx.conf com envsubst
+export PORT
+envsubst '${PORT}' < /etc/nginx/http.d/default.conf.template > /etc/nginx/http.d/default.conf
+
+echo "📡 Starting Nginx on port $PORT..."
 nginx -t && nginx || {
     echo "❌ Nginx configuration test failed"
+    cat /etc/nginx/http.d/default.conf
     exit 1
 }
-echo "✅ Nginx started"
+echo "✅ Nginx started on port $PORT"
 echo ""
 
 # ============================================
@@ -78,7 +89,7 @@ fi
 echo ""
 
 # Aguardar frontend estar acessível via nginx
-if ! wait_for_service "http://localhost/" "Frontend (Nginx)"; then
+if ! wait_for_service "http://localhost:$PORT/" "Frontend (Nginx)"; then
     echo "❌ Frontend health check failed"
     echo "📋 Nginx status:"
     nginx -t
@@ -95,11 +106,12 @@ echo "✅ All services are running!"
 echo "================================"
 echo ""
 echo "📊 Service Information:"
-echo "   Frontend:  http://localhost"
+echo "   Frontend:  http://localhost:$PORT"
 echo "   Backend:   http://localhost:3001"
-echo "   Health:    http://localhost/health"
+echo "   Health:    http://localhost:$PORT/health"
 echo ""
 echo "🐳 Container is ready to accept connections"
+echo "   Listening on port: $PORT"
 echo ""
 echo "================================"
 echo "📋 Logs:"

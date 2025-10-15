@@ -62,8 +62,8 @@ LABEL maintainer="seu-email@example.com"
 LABEL description="PDF Processor - Processamento em lote de PDFs"
 LABEL version="2.1.0"
 
-# Instalar nginx e curl para servir frontend e health checks
-RUN apk add --no-cache nginx curl
+# Instalar nginx, curl e gettext (para envsubst)
+RUN apk add --no-cache nginx curl gettext
 
 # Criar diretórios
 RUN mkdir -p /app/backend /app/frontend /run/nginx /var/log/nginx
@@ -91,8 +91,8 @@ COPY --from=backend-builder /app/backend/package*.json ./
 # Copiar build do frontend
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
 
-# Configurar nginx com arquivo externo
-COPY nginx.conf /etc/nginx/http.d/default.conf
+# Configurar nginx com arquivo template (processado por envsubst em runtime)
+COPY nginx.conf /etc/nginx/http.d/default.conf.template
 
 # ============================================
 # Configurar Variáveis de Ambiente
@@ -104,13 +104,16 @@ ENV NODE_OPTIONS="--max-old-space-size=4096"
 # ============================================
 # Expor Portas
 # ============================================
+# Porta dinâmica (Cloud Run usa $PORT, padrão 80)
+# Backend sempre em 3001
 EXPOSE 80 3001
 
 # ============================================
 # Health Check
 # ============================================
+# Health check usa a porta padrão 80 (Cloud Run injeta PORT no runtime)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost/health || exit 1
+    CMD curl -f http://localhost:${PORT:-80}/health || exit 1
 
 # ============================================
 # Startup Script
