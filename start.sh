@@ -1,20 +1,23 @@
 #!/bin/sh
 set -e
 
-# Cloud Run e outros ambientes podem definir PORT
-PORT=${PORT:-80}
+# Cloud Run injeta PORT para o Nginx (porta pública)
+# Backend usa porta fixa 3001 (interna)
+NGINX_PORT=${PORT:-80}
+BACKEND_PORT=3001
 
 echo "================================"
 echo "🚀 Starting PDF Processor v2.1.0"
 echo "================================"
-echo "Port: $PORT"
+echo "Nginx Port: $NGINX_PORT"
+echo "Backend Port: $BACKEND_PORT"
 echo ""
 
 # Função para verificar se um serviço está respondendo
 wait_for_service() {
     local url=$1
     local name=$2
-    local max_attempts=30
+    local max_attempts=15
     local attempt=1
 
     echo "⏳ Waiting for $name to be ready..."
@@ -26,7 +29,7 @@ wait_for_service() {
         fi
 
         echo "   Attempt $attempt/$max_attempts..."
-        sleep 2
+        sleep 1
         attempt=$((attempt + 1))
     done
 
@@ -37,25 +40,25 @@ wait_for_service() {
 # ============================================
 # 1. Configurar e Iniciar Nginx
 # ============================================
-echo "📝 Configuring Nginx for port $PORT..."
+echo "📝 Configuring Nginx for port $NGINX_PORT..."
 
 # Processar template do nginx.conf com envsubst
-export PORT
+export PORT=$NGINX_PORT
 envsubst '${PORT}' < /etc/nginx/http.d/default.conf.template > /etc/nginx/http.d/default.conf
 
-echo "📡 Starting Nginx on port $PORT..."
+echo "📡 Starting Nginx on port $NGINX_PORT..."
 nginx -t && nginx || {
     echo "❌ Nginx configuration test failed"
     cat /etc/nginx/http.d/default.conf
     exit 1
 }
-echo "✅ Nginx started on port $PORT"
+echo "✅ Nginx started on port $NGINX_PORT"
 echo ""
 
 # ============================================
 # 2. Iniciar Backend
 # ============================================
-echo "⚙️  Starting Backend (Node.js)..."
+echo "⚙️  Starting Backend (Node.js) on port $BACKEND_PORT..."
 cd /app/backend
 
 # Verificar se os arquivos existem
@@ -64,12 +67,12 @@ if [ ! -f "dist/index.js" ]; then
     exit 1
 fi
 
-# Iniciar o backend em background
-node dist/index.js &
+# Iniciar o backend em background com PORT=3001
+PORT=$BACKEND_PORT node dist/index.js &
 BACKEND_PID=$!
 
 echo "   Backend PID: $BACKEND_PID"
-echo "✅ Backend started"
+echo "✅ Backend started on port $BACKEND_PORT"
 echo ""
 
 # ============================================
@@ -79,7 +82,7 @@ echo "🔍 Checking services health..."
 echo ""
 
 # Aguardar backend estar pronto
-if ! wait_for_service "http://localhost:3001/health" "Backend API"; then
+if ! wait_for_service "http://localhost:$BACKEND_PORT/health" "Backend API"; then
     echo "❌ Backend health check failed"
     echo "📋 Checking backend logs:"
     ps aux | grep node
@@ -89,7 +92,7 @@ fi
 echo ""
 
 # Aguardar frontend estar acessível via nginx
-if ! wait_for_service "http://localhost:$PORT/" "Frontend (Nginx)"; then
+if ! wait_for_service "http://localhost:$NGINX_PORT/" "Frontend (Nginx)"; then
     echo "❌ Frontend health check failed"
     echo "📋 Nginx status:"
     nginx -t
@@ -106,12 +109,13 @@ echo "✅ All services are running!"
 echo "================================"
 echo ""
 echo "📊 Service Information:"
-echo "   Frontend:  http://localhost:$PORT"
-echo "   Backend:   http://localhost:3001"
-echo "   Health:    http://localhost:$PORT/health"
+echo "   Frontend:  http://localhost:$NGINX_PORT"
+echo "   Backend:   http://localhost:$BACKEND_PORT"
+echo "   Health:    http://localhost:$NGINX_PORT/health"
 echo ""
 echo "🐳 Container is ready to accept connections"
-echo "   Listening on port: $PORT"
+echo "   Public Port: $NGINX_PORT (Nginx)"
+echo "   Backend Port: $BACKEND_PORT (Node.js)"
 echo ""
 echo "================================"
 echo "📋 Logs:"

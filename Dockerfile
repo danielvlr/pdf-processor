@@ -98,7 +98,7 @@ COPY nginx.conf /etc/nginx/http.d/default.conf.template
 # Configurar Variáveis de Ambiente
 # ============================================
 ENV NODE_ENV=production
-ENV PORT=3001
+ENV BACKEND_PORT=3001
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # ============================================
