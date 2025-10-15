@@ -22,33 +22,61 @@ function App() {
 
   const CHUNK_SIZE = 25 * 1024 * 1024; // 25MB per chunk
 
-  // Split ZIP file into chunks and process each one
-  const processZipInChunks = async (): Promise<any[]> => {
+  // Extract PDFs from ZIP and process in batches
+  const processPDFsInBatches = async (): Promise<any[]> => {
     if (!filesZip || !cover) {
       throw new Error('Por favor, selecione os arquivos ZIP e capa');
     }
 
-    const totalChunks = Math.ceil(filesZip.size / CHUNK_SIZE);
+    setUploadProgress('Extracting PDFs from ZIP...');
+
+    // Extract all PDFs from ZIP
+    const JSZip = (await import('jszip')).default;
+    const zip = await JSZip.loadAsync(filesZip);
+
+    const pdfFiles: Array<{ name: string; blob: Blob }> = [];
+
+    for (const [filename, file] of Object.entries(zip.files)) {
+      if (!file.dir && filename.toLowerCase().endsWith('.pdf')) {
+        const blob = await file.async('blob');
+        pdfFiles.push({ name: filename, blob });
+      }
+    }
+
+    console.log(`Found ${pdfFiles.length} PDFs in ZIP`);
+
+    if (pdfFiles.length === 0) {
+      throw new Error('No PDF files found in ZIP');
+    }
+
     const allProcessedFiles: any[] = [];
+    const BATCH_SIZE = 10; // Process 10 PDFs at a time
+    const totalBatches = Math.ceil(pdfFiles.length / BATCH_SIZE);
 
-    console.log(`Splitting ZIP into ${totalChunks} chunks of ${CHUNK_SIZE / 1024 / 1024}MB each`);
+    // Process PDFs in batches
+    for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+      const start = batchIndex * BATCH_SIZE;
+      const end = Math.min(start + BATCH_SIZE, pdfFiles.length);
+      const batch = pdfFiles.slice(start, end);
 
-    // Process each chunk
-    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-      const start = chunkIndex * CHUNK_SIZE;
-      const end = Math.min(start + CHUNK_SIZE, filesZip.size);
-      const zipChunk = filesZip.slice(start, end);
+      setUploadProgress(`Processing batch ${batchIndex + 1}/${totalBatches} (${batch.length} PDFs)...`);
 
-      setUploadProgress(`Processing chunk ${chunkIndex + 1}/${totalChunks} (${Math.round((chunkIndex + 1) / totalChunks * 100)}%)...`);
+      console.log(`Processing batch ${batchIndex + 1}/${totalBatches}: ${batch.length} PDFs`);
 
-      console.log(`Processing chunk ${chunkIndex + 1}/${totalChunks}: ${start}-${end} (${zipChunk.size} bytes)`);
+      // Create a mini ZIP with this batch
+      const batchZip = new JSZip();
+      for (const pdf of batch) {
+        batchZip.file(pdf.name, pdf.blob);
+      }
+
+      const batchZipBlob = await batchZip.generateAsync({ type: 'blob' });
 
       const formData = new FormData();
-      formData.append('zipChunk', zipChunk);
+      formData.append('zipChunk', batchZipBlob);
       formData.append('cover', cover);
       formData.append('footerHeightPx', footerHeightPx.toString());
       formData.append('headerHeightPx', headerHeightPx.toString());
-      formData.append('chunkIndex', chunkIndex.toString());
+      formData.append('chunkIndex', batchIndex.toString());
 
       try {
         const response = await axios.post('/api/process-chunk', formData, {
@@ -57,16 +85,16 @@ function App() {
           },
         });
 
-        console.log(`Chunk ${chunkIndex + 1} processed:`, response.data);
+        console.log(`Batch ${batchIndex + 1} processed:`, response.data);
 
-        // Collect results from this chunk
+        // Collect results from this batch
         if (response.data.results && Array.isArray(response.data.results)) {
           allProcessedFiles.push(...response.data.results);
         }
 
       } catch (error) {
-        console.error(`Error processing chunk ${chunkIndex + 1}:`, error);
-        throw new Error(`Failed to process chunk ${chunkIndex + 1}/${totalChunks}`);
+        console.error(`Error processing batch ${batchIndex + 1}:`, error);
+        throw new Error(`Failed to process batch ${batchIndex + 1}/${totalBatches}`);
       }
 
       // Force garbage collection hint
@@ -92,8 +120,8 @@ function App() {
     setProcessing(true);
 
     try {
-      // Process ZIP in chunks and get all results
-      const allProcessedFiles = await processZipInChunks();
+      // Process PDFs in batches and get all results
+      const allProcessedFiles = await processPDFsInBatches();
 
       setUploadProgress('Creating final ZIP...');
 
