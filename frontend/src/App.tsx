@@ -55,7 +55,12 @@ function App() {
 
       setUploadProgress(`Uploading ${fieldName}: ${chunkIndex + 1}/${totalChunks} chunks (${Math.round((chunkIndex + 1) / totalChunks * 100)}%)`);
 
-      await axios.post('/api/upload-chunk', formData);
+      try {
+        await axios.post('/api/upload-chunk', formData);
+      } catch (error) {
+        console.error(`Error uploading chunk ${chunkIndex + 1}/${totalChunks}:`, error);
+        throw new Error(`Failed to upload chunk ${chunkIndex + 1}/${totalChunks}`);
+      }
     }
 
     return fileId;
@@ -112,22 +117,34 @@ function App() {
       window.URL.revokeObjectURL(url);
 
     } catch (err: any) {
+      console.error('Error during processing:', err);
+
+      // Try to extract error message from response
       if (err.response?.data) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          try {
-            const errorData = JSON.parse(reader.result as string);
-            setError(errorData.error || 'Erro ao processar arquivos');
-          } catch {
-            setError('Erro ao processar arquivos');
-          }
-        };
-        reader.readAsText(err.response.data);
+        // Check if it's a Blob (from responseType: 'blob')
+        if (err.response.data instanceof Blob) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const errorData = JSON.parse(reader.result as string);
+              setError(errorData.error || 'Erro ao processar arquivos');
+            } catch {
+              setError('Erro ao processar arquivos');
+            }
+          };
+          reader.readAsText(err.response.data);
+        } else if (typeof err.response.data === 'object') {
+          // JSON error response
+          setError(err.response.data.error || err.response.data.message || 'Erro ao processar arquivos');
+        } else {
+          setError(String(err.response.data) || 'Erro ao processar arquivos');
+        }
       } else {
         setError(err.message || 'Erro ao processar arquivos');
       }
     } finally {
       setProcessing(false);
+      setUploadProgress('');
     }
   };
 
