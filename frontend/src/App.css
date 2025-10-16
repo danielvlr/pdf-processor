@@ -72,6 +72,77 @@ h1 {
   border-color: #667eea;
 }
 
+/* Collapsible Settings Container */
+.settings-container {
+  margin-bottom: 24px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f7fafc;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.settings-toggle {
+  width: 100%;
+  padding: 16px;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2d3748;
+  transition: background 0.2s;
+  text-align: left;
+}
+
+.settings-toggle:hover {
+  background: #edf2f7;
+}
+
+.toggle-icon {
+  color: #667eea;
+  font-size: 12px;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+}
+
+.toggle-text {
+  flex-shrink: 0;
+}
+
+.toggle-hint {
+  color: #718096;
+  font-size: 12px;
+  font-weight: 400;
+  margin-left: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.settings-content {
+  padding: 0 16px 16px 16px;
+  background: white;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+    padding-bottom: 16px;
+  }
+}
+
 .btn-submit {
   width: 100%;
   padding: 14px;
@@ -212,5 +283,21 @@ tr.error {
 
   th, td {
     padding: 8px;
+  }
+
+  .settings-toggle {
+    padding: 12px;
+    font-size: 13px;
+    flex-wrap: wrap;
+  }
+
+  .toggle-hint {
+    width: 100%;
+    margin-left: 24px;
+    margin-top: 4px;
+  }
+
+  .settings-content {
+    padding: 0 12px 12px 12px;
   }
 }

@@ -19,6 +19,7 @@ function App() {
   const [uploadProgress, setUploadProgress] = useState<string>('');
   const [report, setReport] = useState<ProcessedFile[]>([]);
   const [error, setError] = useState<string>('');
+  const [settingsExpanded, setSettingsExpanded] = useState<boolean>(false);
 
   // Load default cover on component mount
   React.useEffect(() => {
@@ -266,51 +267,71 @@ function App() {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="cover">
-              Arquivo de Capa (PDF ou Imagem)
-              {cover && <span className="file-name">{cover.name}</span>}
-              {cover && cover.name === 'Capa.pdf' && <span className="file-name" style={{ color: '#10b981' }}> (padrão)</span>}
-            </label>
-            <input
-              type="file"
-              id="cover"
-              accept=".pdf,.png,.jpg,.jpeg,.svg"
-              onChange={(e) => setCover(e.target.files?.[0] || null)}
-            />
-            {!cover && (
-              <p style={{ fontSize: '12px', color: '#718096', marginTop: '4px' }}>
-                Capa padrão será carregada automaticamente, ou escolha outra
-              </p>
+          {/* Collapsible Settings Container */}
+          <div className="settings-container">
+            <button
+              type="button"
+              className="settings-toggle"
+              onClick={() => setSettingsExpanded(!settingsExpanded)}
+            >
+              <span className="toggle-icon">{settingsExpanded ? '▼' : '▶'}</span>
+              <span className="toggle-text">Configurações (Capa, Cabeçalho, Rodapé)</span>
+              <span className="toggle-hint">
+                {!settingsExpanded && cover && `Capa: ${cover.name}`}
+                {!settingsExpanded && ` • Header: ${headerHeightPx}px • Footer: ${footerHeightPx}px`}
+              </span>
+            </button>
+
+            {settingsExpanded && (
+              <div className="settings-content">
+                <div className="form-group">
+                  <label htmlFor="cover">
+                    Arquivo de Capa (PDF ou Imagem)
+                    {cover && <span className="file-name">{cover.name}</span>}
+                    {cover && cover.name === 'Capa.pdf' && <span className="file-name" style={{ color: '#10b981' }}> (padrão)</span>}
+                  </label>
+                  <input
+                    type="file"
+                    id="cover"
+                    accept=".pdf,.png,.jpg,.jpeg,.svg"
+                    onChange={(e) => setCover(e.target.files?.[0] || null)}
+                  />
+                  {!cover && (
+                    <p style={{ fontSize: '12px', color: '#718096', marginTop: '4px' }}>
+                      Capa padrão será carregada automaticamente, ou escolha outra
+                    </p>
+                  )}
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="headerHeight">
+                    Altura do Cabeçalho (px)
+                  </label>
+                  <input
+                    type="number"
+                    id="headerHeight"
+                    min="0"
+                    max="200"
+                    value={headerHeightPx}
+                    onChange={(e) => setHeaderHeightPx(parseInt(e.target.value))}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="footerHeight">
+                    Altura do Rodapé (px)
+                  </label>
+                  <input
+                    type="number"
+                    id="footerHeight"
+                    min="0"
+                    max="200"
+                    value={footerHeightPx}
+                    onChange={(e) => setFooterHeightPx(parseInt(e.target.value))}
+                  />
+                </div>
+              </div>
             )}
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="headerHeight">
-              Altura do Cabeçalho (px)
-            </label>
-            <input
-              type="number"
-              id="headerHeight"
-              min="0"
-              max="200"
-              value={headerHeightPx}
-              onChange={(e) => setHeaderHeightPx(parseInt(e.target.value))}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="footerHeight">
-              Altura do Rodapé (px)
-            </label>
-            <input
-              type="number"
-              id="footerHeight"
-              min="0"
-              max="200"
-              value={footerHeightPx}
-              onChange={(e) => setFooterHeightPx(parseInt(e.target.value))}
-            />
           </div>
 
           <button type="submit" disabled={processing} className="btn-submit">
