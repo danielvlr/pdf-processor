@@ -21,9 +21,26 @@ function App() {
   const [error, setError] = useState<string>('');
   const [settingsExpanded, setSettingsExpanded] = useState<boolean>(false);
 
-  // Load default cover on component mount
+  // Function to upload cover to backend
+  const uploadCoverToBackend = async (file: File) => {
+    const formData = new FormData();
+    formData.append('cover', file);
+
+    try {
+      await axios.post('/api/upload-cover', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      console.log(`Cover uploaded to backend: ${file.name}`);
+    } catch (uploadError) {
+      console.error('Failed to upload cover to backend:', uploadError);
+    }
+  };
+
+  // Load default cover on component mount and upload it automatically
   React.useEffect(() => {
-    const loadDefaultCover = async () => {
+    const loadAndUploadDefaultCover = async () => {
       try {
         // Try to fetch Capa.pdf from public folder
         const response = await fetch('/Capa.pdf');
@@ -31,15 +48,29 @@ function App() {
           const blob = await response.blob();
           const file = new File([blob], 'Capa.pdf', { type: 'application/pdf' });
           setCover(file);
-          console.log('Default cover loaded: Capa.pdf');
+          console.log('Default cover loaded and ready for processing: Capa.pdf');
+
+          // Automatically upload the default cover to backend
+          await uploadCoverToBackend(file);
         }
       } catch (error) {
         console.log('No default cover found, user will need to upload one');
       }
     };
 
-    loadDefaultCover();
+    loadAndUploadDefaultCover();
   }, []);
+
+  // Handle manual cover change
+  const handleCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setCover(file);
+
+    if (file) {
+      // Upload new cover to backend
+      await uploadCoverToBackend(file);
+    }
+  };
 
   // Extract PDFs from ZIP and process in batches
   const processPDFsInBatches = async (): Promise<any[]> => {
@@ -92,9 +123,7 @@ function App() {
 
       const formData = new FormData();
       formData.append('zipChunk', batchZipBlob);
-      if (cover) {
-        formData.append('cover', cover);
-      }
+      // Cover is already uploaded to backend, no need to send it again
       formData.append('footerHeightPx', footerHeightPx.toString());
       formData.append('headerHeightPx', headerHeightPx.toString());
       formData.append('chunkIndex', batchIndex.toString());
@@ -296,7 +325,7 @@ function App() {
                     type="file"
                     id="cover"
                     accept=".pdf,.png,.jpg,.jpeg,.svg"
-                    onChange={(e) => setCover(e.target.files?.[0] || null)}
+                    onChange={handleCoverChange}
                   />
                   {!cover && (
                     <p style={{ fontSize: '12px', color: '#718096', marginTop: '4px' }}>

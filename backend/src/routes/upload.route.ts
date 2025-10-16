@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { uploadChunk, uploadSingle } from '../controllers/upload.controller';
+import { uploadCover } from '../controllers/upload-cover.controller';
 
 const router = Router();
 
@@ -12,6 +13,9 @@ const upload = multer({
     fieldSize: 35 * 1024 * 1024, // 35MB for field size
   },
 });
+
+// Upload cover file (for default cover auto-upload)
+router.post('/upload-cover', upload.fields([{ name: 'cover', maxCount: 1 }]), uploadCover);
 
 // Upload a single chunk
 router.post('/upload-chunk', upload.fields([{ name: 'chunk', maxCount: 1 }]), uploadChunk);

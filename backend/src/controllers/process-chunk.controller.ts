@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import JSZip from 'jszip';
 import { processPDF } from '../services/pdf.service';
+import { getUploadedCover } from './upload-cover.controller';
 
 interface ProcessedFileResult {
   name: string;
@@ -20,11 +21,20 @@ export async function processChunk(
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
     const zipChunk = files?.zipChunk?.[0];
-    const cover = files?.cover?.[0];
+    let cover = files?.cover?.[0];
 
     if (!zipChunk) {
       res.status(400).json({ error: 'Missing zipChunk file' });
       return;
+    }
+
+    // If no cover was sent in this request, try to use the pre-uploaded cover
+    if (!cover) {
+      const uploadedCover = getUploadedCover();
+      if (uploadedCover) {
+        cover = uploadedCover;
+        console.log('Using pre-uploaded cover from memory');
+      }
     }
 
     const footerHeightPx = parseInt(req.body.footerHeightPx || '10', 10);
