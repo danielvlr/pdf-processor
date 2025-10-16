@@ -22,8 +22,8 @@ export async function processChunk(
     const zipChunk = files?.zipChunk?.[0];
     const cover = files?.cover?.[0];
 
-    if (!zipChunk || !cover) {
-      res.status(400).json({ error: 'Missing zipChunk or cover file' });
+    if (!zipChunk) {
+      res.status(400).json({ error: 'Missing zipChunk file' });
       return;
     }
 
@@ -31,7 +31,7 @@ export async function processChunk(
     const headerHeightPx = parseInt(req.body.headerHeightPx || '0', 10);
     const chunkIndex = parseInt(req.body.chunkIndex || '0', 10);
 
-    console.log(`Processing chunk ${chunkIndex}, size: ${zipChunk.size} bytes`);
+    console.log(`Processing chunk ${chunkIndex}, size: ${zipChunk.size} bytes, cover: ${cover ? 'yes' : 'no'}`);
 
     // Extract PDFs from this chunk
     const zip = new JSZip();
@@ -51,8 +51,8 @@ export async function processChunk(
       return;
     }
 
-    // Process cover file (assume PDF for now)
-    const coverPdfBytes = new Uint8Array(cover.buffer);
+    // Process cover file if provided (assume PDF for now)
+    const coverPdfBytes = cover ? new Uint8Array(cover.buffer) : undefined;
 
     // Process each PDF in this chunk sequentially
     const results: ProcessedFileResult[] = [];

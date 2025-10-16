@@ -43,8 +43,8 @@ function App() {
 
   // Extract PDFs from ZIP and process in batches
   const processPDFsInBatches = async (): Promise<any[]> => {
-    if (!filesZip || !cover) {
-      throw new Error('Por favor, selecione os arquivos ZIP e capa');
+    if (!filesZip) {
+      throw new Error('Por favor, selecione o arquivo ZIP');
     }
 
     setUploadProgress('Extracting PDFs from ZIP...');
@@ -92,7 +92,9 @@ function App() {
 
       const formData = new FormData();
       formData.append('zipChunk', batchZipBlob);
-      formData.append('cover', cover);
+      if (cover) {
+        formData.append('cover', cover);
+      }
       formData.append('footerHeightPx', footerHeightPx.toString());
       formData.append('headerHeightPx', headerHeightPx.toString());
       formData.append('chunkIndex', batchIndex.toString());
@@ -154,8 +156,8 @@ function App() {
     setReport([]);
     setUploadProgress('');
 
-    if (!filesZip || !cover) {
-      setError('Por favor, selecione os arquivos ZIP e capa');
+    if (!filesZip) {
+      setError('Por favor, selecione o arquivo ZIP');
       return;
     }
 

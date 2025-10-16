@@ -12,7 +12,7 @@ let cachedCoverBytes: Uint8Array | null = null;
 
 export async function processPDF(
   pdfBytes: Buffer,
-  coverPdfBytes: Uint8Array,
+  coverPdfBytes: Uint8Array | undefined,
   footerHeightPx: number,
   headerHeightPx: number = 0
 ): Promise<ProcessResult> {
@@ -20,24 +20,57 @@ export async function processPDF(
   const pdfDoc = await PDFDocument.load(pdfBytes);
   const originalPages = pdfDoc.getPageCount();
 
-  // Load cover document once and cache it
-  if (!cachedCoverDoc || cachedCoverBytes !== coverPdfBytes) {
-    cachedCoverDoc = await PDFDocument.load(coverPdfBytes);
-    cachedCoverBytes = coverPdfBytes;
+  // Load cover document once and cache it (only if provided)
+  if (coverPdfBytes) {
+    if (!cachedCoverDoc || cachedCoverBytes !== coverPdfBytes) {
+      cachedCoverDoc = await PDFDocument.load(coverPdfBytes);
+      cachedCoverBytes = coverPdfBytes;
+    }
   }
 
   // Handle edge case: PDF with only 1 page
   if (originalPages === 1) {
     const newDoc = await PDFDocument.create();
-    const [coverPage] = await newDoc.copyPages(cachedCoverDoc, [0]);
 
-    // Get original page dimensions
-    const originalPage = pdfDoc.getPage(0);
-    const { width, height } = originalPage.getSize();
+    if (coverPdfBytes && cachedCoverDoc) {
+      // Use cover if provided
+      const [coverPage] = await newDoc.copyPages(cachedCoverDoc, [0]);
 
-    // Scale cover to match original dimensions
-    coverPage.setSize(width, height);
-    newDoc.addPage(coverPage);
+      // Get original page dimensions
+      const originalPage = pdfDoc.getPage(0);
+      const { width, height } = originalPage.getSize();
+
+      // Scale cover to match original dimensions
+      coverPage.setSize(width, height);
+      newDoc.addPage(coverPage);
+    } else {
+      // No cover, just copy original page without header/footer
+      const [originalPage] = await newDoc.copyPages(pdfDoc, [0]);
+      const { width, height } = originalPage.getSize();
+
+      // Remove footer and header
+      if (footerHeightPx > 0) {
+        originalPage.drawRectangle({
+          x: 0,
+          y: 0,
+          width: width,
+          height: footerHeightPx,
+          color: rgb(1, 1, 1), // White
+        });
+      }
+
+      if (headerHeightPx > 0) {
+        originalPage.drawRectangle({
+          x: 0,
+          y: height - headerHeightPx,
+          width: width,
+          height: headerHeightPx,
+          color: rgb(1, 1, 1), // White
+        });
+      }
+
+      newDoc.addPage(originalPage);
+    }
 
     const processedBytes = await newDoc.save({ useObjectStreams: false });
     return {
@@ -50,16 +83,44 @@ export async function processPDF(
   // Create new PDF document
   const newDoc = await PDFDocument.create();
 
-  // 1. Add cover as first page
-  const [coverPage] = await newDoc.copyPages(cachedCoverDoc, [0]);
+  // 1. Add cover as first page (if provided) or keep original first page
+  if (coverPdfBytes && cachedCoverDoc) {
+    const [coverPage] = await newDoc.copyPages(cachedCoverDoc, [0]);
 
-  // Get first page dimensions from original
-  const firstPage = pdfDoc.getPage(0);
-  const { width: targetWidth, height: targetHeight } = firstPage.getSize();
+    // Get first page dimensions from original
+    const firstPage = pdfDoc.getPage(0);
+    const { width: targetWidth, height: targetHeight } = firstPage.getSize();
 
-  // Scale cover to match original first page dimensions
-  coverPage.setSize(targetWidth, targetHeight);
-  newDoc.addPage(coverPage);
+    // Scale cover to match original first page dimensions
+    coverPage.setSize(targetWidth, targetHeight);
+    newDoc.addPage(coverPage);
+  } else {
+    // No cover, copy first page with header/footer removed
+    const [firstPage] = await newDoc.copyPages(pdfDoc, [0]);
+    const { width, height } = firstPage.getSize();
+
+    if (footerHeightPx > 0) {
+      firstPage.drawRectangle({
+        x: 0,
+        y: 0,
+        width: width,
+        height: footerHeightPx,
+        color: rgb(1, 1, 1),
+      });
+    }
+
+    if (headerHeightPx > 0) {
+      firstPage.drawRectangle({
+        x: 0,
+        y: height - headerHeightPx,
+        width: width,
+        height: headerHeightPx,
+        color: rgb(1, 1, 1),
+      });
+    }
+
+    newDoc.addPage(firstPage);
+  }
 
   // 2. Process middle pages (page 2 to second-to-last) - remove footer
   const middlePageCount = originalPages - 2;
